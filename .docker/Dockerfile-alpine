@@ -1,12 +1,43 @@
-FROM alpine:3.21.3
+FROM golang:1.26-alpine AS builder
 
-RUN addgroup -S ory; \
-    adduser -S ory -G ory -D -H -s /bin/nologin
+WORKDIR /go/src/github.com/ory/keto
 
-RUN apk --no-cache --latest upgrade &&\
-    apk --no-cache --upgrade --latest add ca-certificates
+RUN apk add --no-cache build-base sqlite-dev \
+    && mkdir -p /var/lib/sqlite \
+    && mkdir -p ./internal/httpclient
 
-COPY keto /usr/bin/keto
+COPY go.mod go.mod
+COPY go.sum go.sum
+
+COPY proto/go.mod proto/go.mod
+COPY proto/go.sum proto/go.sum
+COPY oryx/go.mod oryx/go.mod
+COPY oryx/go.sum oryx/go.sum
+
+ENV CGO_ENABLED=1
+
+RUN go mod download
+
+COPY . .
+
+RUN go build -buildvcs=false -o /usr/bin/keto .
+
+#########################
+
+FROM alpine:3.21
+
+RUN addgroup -S ory \
+    && adduser -S ory -G ory -D -H -s /bin/nologin \
+    && apk --no-cache --upgrade --latest add ca-certificates sqlite-libs tzdata
+
+COPY --from=builder /usr/bin/keto /usr/bin/keto
+
+RUN mkdir -p /var/lib/sqlite \
+    && chown -R ory:ory /var/lib/sqlite
+
+VOLUME /var/lib/sqlite
+
+EXPOSE 4466 4467
 
 USER ory
 
