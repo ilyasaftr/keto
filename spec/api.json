@@ -6,7 +6,10 @@
       }
     },
     "schemas": {
-      "DefaultError": {},
+      "DefaultError": {
+        "description": "From https://go.dev/wiki/CodeReviewComments#receiver-type:\n\u003e Can function or methods, either concurrently or when called from this method, be mutating the receiver? A value type creates a copy of the receiver when the method is invoked, so outside updates will not be applied to this receiver. If changes must be visible in the original receiver, the receiver must be a pointer.\n\u003e If the receiver is a struct, array or slice and any of its elements is a pointer to something that might be mutating,\n\u003e prefer a pointer receiver, as it will make the intention clearer to the reader.\n\u003e Don’t mix receiver types. Choose either pointers or struct types for all available methods.",
+        "title": "DefaultError is not safe to shallow copy because it contains\nfields which are not value types, e.g. maps.\nA shallow copy would inadvertently share these underlying fields,\nleading to incorrect behavior and data races in a concurrent context.\nConsequently, all methods take the type by pointer and not by value."
+      },
       "ParseError": {
         "properties": {
           "end": {
@@ -819,7 +822,7 @@
         "operationId": "getRelationships",
         "parameters": [
           {
-            "description": "Items per Page\n\nThis is the number of items per page to return.\nFor details on pagination please head over to the [pagination documentation](https://www.ory.sh/docs/ecosystem/api-design#pagination).",
+            "description": "Items per Page\n\nThis is the number of items per page to return.\nFor details on pagination please head over to the [pagination documentation](https://www.ory.com/docs/ecosystem/api-design#pagination).",
             "in": "query",
             "name": "page_size",
             "schema": {
@@ -831,7 +834,7 @@
             }
           },
           {
-            "description": "Next Page Token\n\nThe next page token.\nFor details on pagination please head over to the [pagination documentation](https://www.ory.sh/docs/ecosystem/api-design#pagination).",
+            "description": "Next Page Token\n\nThe next page token.\nFor details on pagination please head over to the [pagination documentation](https://www.ory.com/docs/ecosystem/api-design#pagination).",
             "in": "query",
             "name": "page_token",
             "schema": {
@@ -934,7 +937,7 @@
     },
     "/relation-tuples/batch/check": {
       "post": {
-        "description": "To learn how relationship tuples and the check works, head over to [the documentation](https://www.ory.sh/docs/keto/concepts/api-overview).",
+        "description": "To learn how relationship tuples and the check works, head over to [the documentation](https://www.ory.com/docs/keto/concepts/api-overview).",
         "operationId": "batchCheckPermission",
         "parameters": [
           {
@@ -995,7 +998,7 @@
     },
     "/relation-tuples/check": {
       "get": {
-        "description": "To learn how relationship tuples and the check works, head over to [the documentation](https://www.ory.sh/docs/keto/concepts/api-overview).",
+        "description": "To learn how relationship tuples and the check works, head over to [the documentation](https://www.ory.com/docs/keto/concepts/api-overview).",
         "operationId": "checkPermissionOrError",
         "parameters": [
           {
@@ -1110,7 +1113,7 @@
         "x-ory-ratelimit-bucket": "keto-public-high"
       },
       "post": {
-        "description": "To learn how relationship tuples and the check works, head over to [the documentation](https://www.ory.sh/docs/keto/concepts/api-overview).",
+        "description": "To learn how relationship tuples and the check works, head over to [the documentation](https://www.ory.com/docs/keto/concepts/api-overview).",
         "operationId": "postCheckPermissionOrError",
         "parameters": [
           {
@@ -1181,7 +1184,7 @@
     },
     "/relation-tuples/check/openapi": {
       "get": {
-        "description": "To learn how relationship tuples and the check works, head over to [the documentation](https://www.ory.sh/docs/keto/concepts/api-overview).",
+        "description": "To learn how relationship tuples and the check works, head over to [the documentation](https://www.ory.com/docs/keto/concepts/api-overview).",
         "operationId": "checkPermission",
         "parameters": [
           {
@@ -1286,7 +1289,7 @@
         "x-ory-ratelimit-bucket": "keto-public-high"
       },
       "post": {
-        "description": "To learn how relationship tuples and the check works, head over to [the documentation](https://www.ory.sh/docs/keto/concepts/api-overview).",
+        "description": "To learn how relationship tuples and the check works, head over to [the documentation](https://www.ory.com/docs/keto/concepts/api-overview).",
         "operationId": "postCheckPermission",
         "parameters": [
           {

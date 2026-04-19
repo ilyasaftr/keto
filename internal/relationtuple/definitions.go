@@ -5,7 +5,6 @@ package relationtuple
 
 import (
 	"context"
-	"fmt"
 	"sync"
 
 	"github.com/gofrs/uuid"
@@ -21,7 +20,7 @@ type (
 	}
 	Traverser interface {
 		TraverseSubjectSetExpansion(ctx context.Context, tuple *RelationTuple) ([]*TraversalResult, error)
-		TraverseSubjectSetRewrite(ctx context.Context, tuple *RelationTuple, computedSubjectSets []string) ([]*TraversalResult, error)
+		FindTupleWithRelations(ctx context.Context, tuple *RelationTuple, relations []string) (*RelationTuple, error)
 	}
 	Manager interface {
 		GetRelationTuples(ctx context.Context, query *RelationQuery, options ...keysetpagination.Option) ([]*RelationTuple, *keysetpagination.Paginator, error)
@@ -66,11 +65,35 @@ type (
 
 	// TODO(hperl): Also use a ketoapi.Tree here.
 	Tree struct {
-		Type     ketoapi.TreeNodeType `json:"type"`
-		Subject  Subject              `json:"subject"`
-		Children []*Tree              `json:"children,omitempty"`
+		Type       ketoapi.TreeNodeType `json:"type"`
+		Subject    Subject              `json:"subject"`
+		Children   []*Tree              `json:"children,omitempty"`
+		Truncation *Truncation          `json:"truncation,omitempty"`
 	}
 
+	Truncation struct {
+		Reason TruncationReason `json:"reason,omitempty"`
+		Cursor *ExpandCursor    `json:"cursor,omitempty"`
+	}
+
+	TruncationReason string
+	ExpandCursorKind string
+	ExpandCursor     struct {
+		Kind          ExpandCursorKind           `json:"kind"`
+		SubjectSet    *SubjectSet                `json:"subject_set,omitempty"`
+		NextPageToken keysetpagination.PageToken `json:"next_page_token,omitempty"`
+
+		// TraverseRelation is the ComputedRelation in TupleToSubjectSet relation
+		TraverseRelation *string `json:"traverse_relation,omitempty"`
+	}
+)
+
+const (
+	ExpandCursorKindDirect ExpandCursorKind = "direct"
+	ExpandCursorKindTTU    ExpandCursorKind = "ttu"
+)
+
+type (
 	TraversalResult struct {
 		From  *RelationTuple
 		To    *RelationTuple
@@ -86,6 +109,12 @@ const (
 	TraversalSubjectSetExpand Traversal = "subject set expand"
 	TraversalComputedUserset  Traversal = "computed userset"
 	TraversalTupleToUserset   Traversal = "tuple to userset"
+)
+
+const (
+	TruncationReasonDepthLimit TruncationReason = "depth_limit"
+	TruncationReasonTupleLimit TruncationReason = "tuple_limit"
+	TruncationReasonCycle      TruncationReason = "cycle"
 )
 
 var _, _ Subject = (*SubjectID)(nil), (*SubjectSet)(nil)
@@ -114,7 +143,10 @@ func (s *SubjectSet) UniqueID() uuid.UUID {
 }
 
 func (s *SubjectSet) String() string {
-	return fmt.Sprintf("%s:%s#%s", s.Namespace, s.Object, s.Relation)
+	if s == nil {
+		return ""
+	}
+	return s.Namespace + ":" + s.Object.String() + "#" + s.Relation
 }
 
 func (t *RelationTuple) ToQuery() *RelationQuery {
@@ -130,7 +162,12 @@ func (t *RelationTuple) String() string {
 	if t == nil {
 		return ""
 	}
-	return fmt.Sprintf("%s:%s#%s@%s", t.Namespace, t.Object, t.Relation, t.Subject)
+
+	subject := ""
+	if t.Subject != nil {
+		subject = t.Subject.String()
+	}
+	return t.Namespace + ":" + t.Object.String() + "#" + t.Relation + "@" + subject
 }
 
 func (t *RelationTuple) FromProto(proto *rts.RelationTuple) *RelationTuple {
